@@ -9,7 +9,7 @@
 ## Install
 
 ```bash
-go get -u -x github.com/XmchxUp/goBiliBili
+go install github.com/XmchxUp/goBiliBili
 
 export FBTOKEN = "YOUR_TOKEN_HERE"
 ```
