@@ -1,4 +1,4 @@
-module github.com/xmchxup/goBiliBili
+module github.com/XmchxUp/goBiliBili
 
 go 1.21.6
 

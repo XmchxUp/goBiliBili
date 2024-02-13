@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xmchxup/goBiliBili/extensions"
-	"github.com/xmchxup/goBiliBili/logger"
-	"github.com/xmchxup/goBiliBili/proxy"
+	"github.com/XmchxUp/goBiliBili/extensions"
+	"github.com/XmchxUp/goBiliBili/logger"
+	"github.com/XmchxUp/goBiliBili/proxy"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"

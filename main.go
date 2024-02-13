@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/XmchxUp/goBiliBili/collect"
+	"github.com/XmchxUp/goBiliBili/logger"
+	"github.com/XmchxUp/goBiliBili/payload"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	"github.com/xmchxup/goBiliBili/collect"
-	"github.com/xmchxup/goBiliBili/logger"
-	"github.com/xmchxup/goBiliBili/payload"
 )
 
 var uid string
