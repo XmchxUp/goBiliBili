@@ -20,7 +20,7 @@ export bilibili_cookie="xxx"
 ## Usage
 
 ```bash
-goBiliBili [options]
+goBiliBili -h
 ```
 
 ```bash
