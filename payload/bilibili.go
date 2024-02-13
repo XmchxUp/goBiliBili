@@ -23,11 +23,13 @@ type BiliBiliDynamicResponse struct {
 							Width  float64 `json:"width"`
 						} `json:"container_size"`
 					} `json:"avatar"`
+					Name string `json:"name"`
 				} `json:"module_author"`
 				ModuleDynamic struct {
 					Major struct {
 						Archive struct {
 							Cover   string `json:"cover"`
+							Title   string `json:"title"`
 							Desc    string `json:"desc"`
 							JumpURL string `json:"jump_url"`
 							Stat    struct {
@@ -47,5 +49,5 @@ type BiliBiliDynamicResponse struct {
 			Type string `json:"type"`
 		} `json:"items"`
 		Offset string `json:"offset"`
-	} `json:"data"`
+	}
 }

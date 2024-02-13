@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"regexp"
 	"runtime"
 	"time"
 
@@ -80,23 +81,66 @@ func run(ctx context.Context, log *logger.Logger) error {
 		Log:     log,
 	}
 
-	// get all dynamic
-	dynamicURLs, err := getUPDynamicURLByUID(uid, f)
-	if err == nil {
-		log.Info(ctx, "business", "dynamic_urls", dynamicURLs, "length", len(dynamicURLs))
-	} else {
+	// get all dynamic urls
+	workerCnt := 100
+	picDataCh := make(chan *PicDownloadData, workerCnt)
+	for i := 0; i < 100; i++ {
+		go downloadWorker(picDataCh, f, log)
+	}
+
+	if err := parseUPDynamic(uid, f, picDataCh); err != nil {
 		log.Error(ctx, "business", "listUPDynamicURLByUID", err)
 	}
+
+	// usr, _ := user.Current()
+	// baseDir, _ := fmt.Sprintf("%v/Pictures/goBiliBili", usr.HomeDir)
 
 	return nil
 }
 
-func getUPDynamicURLByUID(uid string, fetcher collect.Fetcher) ([]string, error) {
+func downloadWorker(ch chan *PicDownloadData, fetcher collect.Fetcher, log *logger.Logger) {
+	for d := range ch {
+		log.Info(context.Background(), "download", "info", d)
+		// body, err := fetcher.Get(&collect.Request{URL: url})
+
+		// // 创建一个新的文件用于保存图片
+		// file, err := os.Create("image.png")
+		// if err != nil {
+		// 	fmt.Println("Error creating file:", err)
+		// 	return
+		// }
+		// defer file.Close()
+
+		// // 创建一个缓冲区来存储图片数据
+		// buffer := make([]byte, 1024)
+
+		// // 读取响应体并写入文件
+		// _, err = io.CopyBuffer(file, body, buffer)
+		// if err != nil {
+		// 	fmt.Println("Error writing image to file:", err)
+		// 	return
+		// }}
+	}
+
+}
+
+type PicDownloadData struct {
+	Name string
+	URLs []string
+}
+
+func removeWhitespace(str string) string {
+	re := regexp.MustCompile(`\s+`)
+	return re.ReplaceAllString(str, "")
+}
+
+func parseUPDynamic(uid string, fetcher collect.Fetcher, picDataCh chan *PicDownloadData) error {
 	baseURL := "https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space?host_mid=%s&timezone_offset=-480"
 
-	var bilibiliResp payload.BiliBiliDynamicSimplifyResponse
+	var bilibiliResp payload.BiliBiliDynamicResponse
 
-	res := make([]string, 0, 10)
+	now := time.Now()
+	year, month, day := now.Date()
 
 	for {
 		url := fmt.Sprintf(baseURL, uid)
@@ -104,16 +148,37 @@ func getUPDynamicURLByUID(uid string, fetcher collect.Fetcher) ([]string, error)
 			url += "&offset=" + bilibiliResp.Data.Offset
 		}
 
-		res = append(res, url)
-
 		body, err := fetcher.Get(&collect.Request{URL: url, Cookie: cookie})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		err = json.Unmarshal(body, &bilibiliResp)
 		if err != nil {
-			return nil, err
+			return err
+		}
+
+		for _, item := range bilibiliResp.Data.Items {
+			name := item.Modules.ModuleAuthor.Name
+			desc := item.Modules.ModuleDynamic.Major.Archive.Desc
+			title := item.Modules.ModuleDynamic.Major.Archive.Title
+
+			picURLs := make([]string, 0, len(item.Modules.ModuleDynamic.Major.Archive.Pics)+1)
+
+			if item.Modules.ModuleDynamic.Major.Archive.Cover != "" {
+				picURLs = append(picURLs, item.Modules.ModuleDynamic.Major.Archive.Cover)
+			}
+
+			for _, pic := range item.Modules.ModuleDynamic.Major.Archive.Pics {
+				picURLs = append(picURLs, pic.URL)
+			}
+
+			fileName := fmt.Sprintf("%d-%02d-%02d%s-%s-%s", year, month, day, name, title, desc)
+
+			picDataCh <- &PicDownloadData{
+				Name: removeWhitespace(fileName),
+				URLs: picURLs,
+			}
 		}
 
 		if !bilibiliResp.Data.HasMore || bilibiliResp.Data.Offset == "" {
@@ -123,5 +188,5 @@ func getUPDynamicURLByUID(uid string, fetcher collect.Fetcher) ([]string, error)
 		time.Sleep(time.Duration(rand.Int31n(1000)+100) * time.Millisecond)
 	}
 
-	return res, nil
+	return nil
 }

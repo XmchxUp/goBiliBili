@@ -48,9 +48,10 @@ func (BaseFetch) Get(req *Request) ([]byte, error) {
 
 // BrowserFetch 模拟浏览器访问
 type BrowserFetch struct {
-	Timeout time.Duration
-	Proxy   proxy.Func
-	Log     *logger.Logger
+	Timeout           time.Duration
+	Proxy             proxy.Func
+	Log               *logger.Logger
+	AutoConvertToUTF8 bool
 }
 
 func (b *BrowserFetch) Get(request *Request) ([]byte, error) {
@@ -80,6 +81,10 @@ func (b *BrowserFetch) Get(request *Request) ([]byte, error) {
 	}
 
 	defer resp.Body.Close()
+
+	if !b.AutoConvertToUTF8 {
+		return io.ReadAll(resp.Body)
+	}
 
 	bodyReader := bufio.NewReader(resp.Body)
 
