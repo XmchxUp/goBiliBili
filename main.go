@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/user"
 	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -19,6 +21,7 @@ import (
 
 var uid string
 var cookie string
+var baseDir string
 
 func main() {
 	var log *logger.Logger
@@ -71,13 +74,21 @@ func main() {
 }
 
 func run(ctx context.Context, log *logger.Logger) error {
-
 	log.Info(ctx, "startup", "GOMAXPROCS", runtime.GOMAXPROCS(0))
-
 	log.Info(ctx, "startup", "uid", uid)
 
+	usr, _ := user.Current()
+
+	baseDir = fmt.Sprintf("%v/Pictures/goBiliBili", usr.HomeDir)
+	err := createDirIfNotExist(baseDir)
+	if err != nil {
+		return err
+	}
+
+	log.Info(ctx, "startup", "download directory path", baseDir)
+
 	var f collect.Fetcher = &collect.BrowserFetch{
-		Timeout: time.Duration(5000) * time.Millisecond,
+		Timeout: time.Duration(10000) * time.Millisecond,
 		Log:     log,
 	}
 
@@ -89,39 +100,56 @@ func run(ctx context.Context, log *logger.Logger) error {
 	}
 
 	if err := parseUPDynamic(uid, f, picDataCh); err != nil {
-		log.Error(ctx, "business", "listUPDynamicURLByUID", err)
+		return err
 	}
 
-	// usr, _ := user.Current()
-	// baseDir, _ := fmt.Sprintf("%v/Pictures/goBiliBili", usr.HomeDir)
+	return nil
+}
+
+func createDirIfNotExist(dirPath string) error {
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err = os.MkdirAll(dirPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+
+	} else if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func downloadWorker(ch chan *PicDownloadData, fetcher collect.Fetcher, log *logger.Logger) {
+	var imageType string
 	for d := range ch {
-		log.Info(context.Background(), "download", "info", d)
-		// body, err := fetcher.Get(&collect.Request{URL: url})
+		for i := 0; i < len(d.URLs); i++ {
+			if strings.Contains(d.URLs[i], ".png") {
+				imageType = ".png"
+			} else {
+				imageType = ".jpg"
+			}
 
-		// // 创建一个新的文件用于保存图片
-		// file, err := os.Create("image.png")
-		// if err != nil {
-		// 	fmt.Println("Error creating file:", err)
-		// 	return
-		// }
-		// defer file.Close()
+			body, err := fetcher.Get(&collect.Request{URL: d.URLs[i]})
+			if err != nil {
+				log.Error(context.Background(), "download-worker", "fetcher err", err)
+				continue
+			}
 
-		// // 创建一个缓冲区来存储图片数据
-		// buffer := make([]byte, 1024)
+			filePath := fmt.Sprintf("%s/%s%d%s", baseDir, d.Name, i, imageType)
 
-		// // 读取响应体并写入文件
-		// _, err = io.CopyBuffer(file, body, buffer)
-		// if err != nil {
-		// 	fmt.Println("Error writing image to file:", err)
-		// 	return
-		// }}
+			if _, err := os.Stat(filePath); err == nil {
+				continue
+			}
+
+			err = os.WriteFile(filePath, body, 0644)
+			if err != nil {
+				log.Error(context.Background(), "download-worker", "write file err", err)
+				continue
+			}
+			log.Info(context.Background(), "download", "status", "done", "info", d)
+		}
 	}
-
 }
 
 type PicDownloadData struct {
