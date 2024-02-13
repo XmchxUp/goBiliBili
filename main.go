@@ -56,11 +56,6 @@ func main() {
 		Long:  "v1.0",
 	}
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Warn(ctx, "startup", "msg", err)
-	}
-
 	rootCmd.Flags().StringVar(&uid, "uid", "243824574", "BiliBili's uid")
 	rootCmd.Flags().StringVar(&cookie, "cookie", os.Getenv("bilibili_cookie"), "BiliBili's cookie")
 
@@ -76,10 +71,15 @@ func run(ctx context.Context, log *logger.Logger) error {
 	log.Info(ctx, "startup", "GOMAXPROCS", runtime.GOMAXPROCS(0))
 	log.Info(ctx, "startup", "uid", uid)
 
+	err := godotenv.Load()
+	if err != nil {
+		log.Warn(ctx, "startup", "msg", err)
+	}
+
 	usr, _ := user.Current()
 
 	baseDir = fmt.Sprintf("%v/Pictures/goBiliBili", usr.HomeDir)
-	err := createDirIfNotExist(baseDir)
+	err = createDirIfNotExist(baseDir)
 	if err != nil {
 		return err
 	}
