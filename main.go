@@ -58,8 +58,7 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Error(ctx, "startup", "msg", err)
-		os.Exit(1)
+		log.Warn(ctx, "startup", "msg", err)
 	}
 
 	rootCmd.Flags().StringVar(&uid, "uid", "243824574", "BiliBili's uid")
